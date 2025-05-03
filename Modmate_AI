@@ -1,0 +1,126 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export default function MoodMateApp() {
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [population, setPopulation] = useState("");
+  const [mood, setMood] = useState("");
+  const [suggestion, setSuggestion] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const blockedTopics = ["violence", "religion", "politics", "riots"];
+  const trendingReels = {
+    motivational: [
+      "Uplifting Quotes - From Famous Figures",
+      "Life Hacks: Be More Productive",
+      "Inspiring Music Videos for a Boost",
+    ],
+    funny: [
+      "Funny Animal Clips: Ultimate Fails",
+      "Stand-up Comedy: Best of 2021",
+      "Viral Memes of the Week",
+    ],
+    dance: [
+      "Trending Dance Challenge: 'Savage Love' Remix",
+      "Hip Hop Dance Routines: 2020 Throwback",
+      "Popular Salsa Dance Moves",
+    ],
+    education: [
+      "Science Facts: The Latest Discoveries",
+      "History of the Roman Empire: A 3-Part Documentary",
+      "Tech Tutorials: How to Build a PC",
+    ],
+  };
+
+  const analyzeMood = (input) => {
+    if (input.includes("happy")) return "happy";
+    if (input.includes("sad")) return "sad";
+    if (input.includes("excited")) return "excited";
+    if (input.includes("unmotivated")) return "unmotivated";
+    return "neutral";
+  };
+
+  const suggestContent = (moodType) => {
+    const list = {
+      excited: trendingReels.motivational,
+      sad: trendingReels.funny,
+      unmotivated: trendingReels.education,
+      happy: trendingReels.dance,
+      neutral: trendingReels.funny,
+    }[moodType];
+
+    const suggestion = list[Math.floor(Math.random() * list.length)];
+
+    for (const word of blockedTopics) {
+      if (suggestion.toLowerCase().includes(word)) {
+        return "Sorry, that content is restricted.";
+      }
+    }
+    return suggestion;
+  };
+
+  const fetchUserData = async () => {
+    setLoading(true);
+    try {
+      const userRes = await fetch("https://randomuser.me/api/");
+      const userData = await userRes.json();
+      const fullName = `${userData.results[0].name.first} ${userData.results[0].name.last}`;
+      setName(fullName);
+
+      const ipRes = await fetch("http://ip-api.com/json/");
+      const ipData = await ipRes.json();
+      setCity(ipData.city);
+
+      const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${ipData.countryCode}`);
+      const countryData = await countryRes.json();
+      setCountry(countryData[0].name.common);
+      setPopulation(countryData[0].population.toLocaleString());
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
+    setLoading(false);
+  };
+
+  const handleSubmit = () => {
+    const detected = analyzeMood(mood);
+    const content = suggestContent(detected);
+    setSuggestion(content);
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  return (
+    <div className="p-6 max-w-xl mx-auto space-y-6">
+      <h1 className="text-3xl font-bold text-center">MoodMate</h1>
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          {loading ? (
+            <p>Loading user info...</p>
+          ) : (
+            <>
+              <p>
+                Hello <strong>{name}</strong> from <strong>{city}, {country}</strong><br />
+                Population: {population}
+              </p>
+              <Input
+                placeholder="How are you feeling today?"
+                value={mood}
+                onChange={(e) => setMood(e.target.value)}
+              />
+              <Button onClick={handleSubmit}>Get Reel Suggestion</Button>
+              {suggestion && (
+                <p className="mt-4">🎬 <strong>Suggested Reel:</strong> {suggestion}</p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
